@@ -11,7 +11,7 @@ TEST_CASE("[Tree] testing") {
 	PackedByteArray data;
 	data.append_array(str.to_utf8_buffer());
 	data.append_array(str2.to_utf8_buffer());
-	DataBlock db(data, data.size(), DataBlock::COMPRESSION_ZSTD);
+	DataBlock db(data);
 	db.crc();
 	print_line(  db.get_crc());
 	print_line(String::hex_encode_buffer(db.get_data().ptrw(), db.get_data().size()));

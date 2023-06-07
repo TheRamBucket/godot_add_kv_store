@@ -2,35 +2,24 @@
 #include "core/io/marshalls.h"
 #include "core/crypto/aes_context.h"
 
+constexpr int MAX_BLOCK_SIZE = 4096;
 
-DataBlock::DataBlock(PackedByteArray data, uint32_t size, DataCompressionType compression_type, uint32_t crc) {
-	set_data(data);
-	_size = size;
-	_compression_type = compression_type;
-	_crc = crc;
-}
+DataBlock::DataBlock(PackedByteArray data, uint32_t crc, bool is_compressed, bool is_encrypted) :
+	_data(data), _size(data.size()), _crc(crc), _is_compressed(is_compressed), _is_encrypted(is_encrypted){_verify_size();}
 
-DataBlock::DataBlock(PackedByteArray data, uint32_t size, DataCompressionType compression_type) {
-	set_data(data);
-	_size = size;
-	_compression_type = compression_type;
-}
+DataBlock::DataBlock(PackedByteArray data) :
+	_data(data), _size(data.size()), _crc(0) {_verify_size();}
 
-DataBlock::DataBlock(PackedByteArray data, uint32_t size) {
-	set_data(data);
-	_size = size;
-}
-
-bool DataBlock::verify_crc() {
-  return true;
+bool DataBlock::verify_crc(uint32_t crc_expected){
+	uint32_t actual_crc = _crc32(_data.ptrw());
+	if (actual_crc == crc_expected) {
+		return true;
+	}
+	return false;
 }
 
 PackedByteArray DataBlock::get_data() {
         return _data;
-}
-
-uint8_t DataBlock::get_compression_type() {
-  return _compression_type;
 }
 
 uint32_t DataBlock::get_crc() {
@@ -39,10 +28,6 @@ uint32_t DataBlock::get_crc() {
 
 void DataBlock::set_data(PackedByteArray data) {
 	_data = data;
-}
-
-void DataBlock::set_compression_type(DataCompressionType compression_type) {
-	_compression_type = compression_type;
 }
 
 void DataBlock::crc() {
@@ -67,6 +52,7 @@ void DataBlock::encrypt(String key) {
 	aes_context.start(AESContext::Mode::MODE_CBC_ENCRYPT, key_array, _iv);
 	_data = aes_context.update(_data);
 	aes_context.finish();
+	_is_encrypted = true;
 }
 
 void DataBlock::decrypt(String key) {
@@ -75,31 +61,11 @@ void DataBlock::decrypt(String key) {
 	aes_context.start(AESContext::Mode::MODE_CBC_DECRYPT, key_array, _iv);
 	_data = aes_context.update(_data);
 	aes_context.finish();
-}
-
-Compression::Mode DataBlock::_get_true_mode() const {
-	switch (_compression_type) {
-		case COMPRESSION_FASTLZ: {
-			return Compression::Mode::MODE_FASTLZ;
-		}
-		case COMPRESSION_DEFLATE: {
-			return Compression::Mode::MODE_DEFLATE;
-		}
-		case COMPRESSION_ZSTD: {
-			return Compression::Mode::MODE_ZSTD;
-		}
-		case COMPRESSION_GZIP: {
-			return Compression::Mode::MODE_GZIP;
-		}
-		case COMPRESSION_NONE: {
-			return Compression::Mode::MODE_FASTLZ;
-		}
-	}
-	ERR_FAIL_V_MSG(Compression::Mode::MODE_FASTLZ,"DataBlock::_get_true_mode() called on invalid compression type");
+	_is_encrypted = false;
 }
 
 void DataBlock::compress() {
-	Compression::Mode cm = _get_true_mode();
+	Compression::Mode cm = Compression::MODE_ZSTD;
 	PackedByteArray compressed_array;
 	compressed_array.resize(Compression::get_max_compressed_buffer_size(_size, cm));
 	_size = Compression::compress(compressed_array.ptrw(), _data.ptrw(), _size, cm);
@@ -111,7 +77,7 @@ void DataBlock::compress() {
 }
 
 void DataBlock::decompress() {
-	Compression::Mode cm = _get_true_mode();
+	Compression::Mode cm = Compression::MODE_ZSTD;
 	PackedByteArray decompressed_array;
 	decompressed_array.resize(1024);
 	_size = Compression::decompress(decompressed_array.ptrw(), 1024 ,_data.ptrw(), _data.size(), cm);
@@ -119,7 +85,7 @@ void DataBlock::decompress() {
 		ERR_FAIL_MSG("DataBlock::compress() failed to compress data");
 	}
 	_data = decompressed_array.slice(0, _size);
-	_is_compressed = true;
+	_is_compressed = false;
 }
 
 uint32_t DataBlock::_crc32(uint8_t *data) {
@@ -131,4 +97,8 @@ uint32_t DataBlock::_crc32(uint8_t *data) {
 		}
 	}
 	return ~crc;
+}
+
+void DataBlock::_verify_size() {
+	ERR_FAIL_COND_MSG(_data.size() > MAX_BLOCK_SIZE, "DataBlock size exceeds maximum size of " + String::num(MAX_BLOCK_SIZE) + " bytes");
 }
