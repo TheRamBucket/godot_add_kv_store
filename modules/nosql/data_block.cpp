@@ -4,8 +4,9 @@
 
 constexpr int MAX_BLOCK_SIZE = 4096;
 
-DataBlock::DataBlock(PackedByteArray data, uint32_t crc, bool is_compressed, bool is_encrypted) :
-	_data(data), _size(data.size()), _crc(crc), _is_compressed(is_compressed), _is_encrypted(is_encrypted){_verify_size();}
+DataBlock::DataBlock(PackedByteArray data, uint32_t crc, bool is_compressed, bool is_encrypted, bool multi_start,
+	bool multi_end) : _data(data), _size(data.size()), _crc(crc), _is_compressed(is_compressed),
+	_is_encrypted(is_encrypted),_multi_start(multi_start), _multi_end(multi_end) {_verify_size();}
 
 DataBlock::DataBlock(PackedByteArray data) :
 	_data(data), _size(data.size()), _crc(0) {_verify_size();}
@@ -53,6 +54,7 @@ void DataBlock::encrypt(String key) {
 	_data = aes_context.update(_data);
 	aes_context.finish();
 	_is_encrypted = true;
+	_size = _data.size();
 }
 
 void DataBlock::decrypt(String key) {
@@ -80,12 +82,48 @@ void DataBlock::decompress() {
 	Compression::Mode cm = Compression::MODE_ZSTD;
 	PackedByteArray decompressed_array;
 	decompressed_array.resize(1024);
-	_size = Compression::decompress(decompressed_array.ptrw(), 1024 ,_data.ptrw(), _data.size(), cm);
+	_size = Compression::decompress(decompressed_array.ptrw(), 1024,_data.ptrw(), _data.size(), cm);
 	if (_size == 0) {
 		ERR_FAIL_MSG("DataBlock::compress() failed to compress data");
 	}
 	_data = decompressed_array.slice(0, _size);
 	_is_compressed = false;
+}
+
+void DataBlock::write(String path) {
+	Ref<FileAccess> file = FileAccess::open(path, FileAccess::WRITE);
+
+	ERR_FAIL_COND_MSG(!file->is_open(),"DataBlock::write() failed to open file");
+
+	uint16_t header;
+	header = (_size & 0xFFF) | (_is_compressed << 12) | (_is_encrypted << 13)
+			| (_multi_start << 14) | (_multi_end << 15);
+
+	file->store_16(header);
+	file->store_32(_crc32(_data.ptrw()));
+	file->store_buffer(_data);
+	if (_data.size()+6 < MAX_BLOCK_SIZE) {
+		PackedByteArray padding;
+		padding.resize_zeroed(MAX_BLOCK_SIZE - (_data.size()+6));
+		file->store_buffer(padding);
+	}
+	file->close();
+}
+
+void DataBlock::read(String path, uint64_t offset) {
+	Ref<FileAccess> file = FileAccess::open(path, FileAccess::READ);
+	ERR_FAIL_COND_MSG(!file->is_open(),"DataBlock::read() failed to open file");
+	file->seek(offset);
+	uint16_t header = file->get_16();
+	_size = header & 0xFFF;
+	_is_compressed = (header >> 12) & 1;
+	_is_encrypted = (header >> 13) & 1;
+	_multi_start = (header >> 14) & 1;
+	_multi_end = (header >> 15) & 1;
+	_crc = file->get_32();
+	_data.resize(_size);
+	file->get_buffer(_data.ptrw(), _size);
+	file->close();
 }
 
 uint32_t DataBlock::_crc32(uint8_t *data) {
@@ -100,5 +138,7 @@ uint32_t DataBlock::_crc32(uint8_t *data) {
 }
 
 void DataBlock::_verify_size() {
-	ERR_FAIL_COND_MSG(_data.size() > MAX_BLOCK_SIZE, "DataBlock size exceeds maximum size of " + String::num(MAX_BLOCK_SIZE) + " bytes");
+	ERR_FAIL_COND_MSG(_data.size() > MAX_BLOCK_SIZE - 6, "DataBlock size with header exceeds maximum size of "
+														+ String::num(MAX_BLOCK_SIZE) + " bytes");
 }
+

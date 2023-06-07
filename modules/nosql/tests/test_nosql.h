@@ -16,11 +16,16 @@ TEST_CASE("[Tree] testing") {
 	print_line(  db.get_crc());
 	print_line(String::hex_encode_buffer(db.get_data().ptrw(), db.get_data().size()));
 	db.encrypt("Hello");
-	print_line(String::hex_encode_buffer(db.get_data().ptrw(), db.get_data().size()));
-	db.decrypt("Hello");
-	print_line(String::hex_encode_buffer(db.get_data().ptrw(), db.get_data().size()));
-	String str3 = String::utf8((const char *)db.get_data().ptrw(), db.get_data().size());
-	print_line(str3);
+	db.compress();
+	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_FILESYSTEM);
+	dir->make_dir("c:/temp");
+	db.write("c:/temp/test.dat");
+	DataBlock db2;
+	db2.read("c:/temp/test.dat", 0);
+	db2.decompress();
+	db2.decrypt("Hello");
+	String str4 = String::utf8((const char *)db2.get_data().ptrw(), db2.get_data().size());
+	print_line(str4);
 
 
 	CHECK(true);
