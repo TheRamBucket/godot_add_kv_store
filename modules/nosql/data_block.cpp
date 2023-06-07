@@ -1,5 +1,6 @@
 ﻿#include "data_block.h"
 #include "core/io/marshalls.h"
+#include "core/crypto/aes_context.h"
 
 
 DataBlock::DataBlock(PackedByteArray data, uint32_t size, DataCompressionType compression_type, uint32_t crc) {
@@ -40,7 +41,8 @@ void DataBlock::set_data(PackedByteArray data) {
 	_data = data;
 }
 
-void DataBlock::set_compression_type(uint8_t compression_type) {
+void DataBlock::set_compression_type(DataCompressionType compression_type) {
+	_compression_type = compression_type;
 }
 
 void DataBlock::crc() {
@@ -53,8 +55,29 @@ void DataBlock::crc() {
 	_crc = _crc32(_data.ptrw());
 
 }
+void DataBlock::encrypt(String key) {
+	PackedByteArray key_array = key.md5_buffer();
+	AESContext aes_context;
+	if (_data.size() % 16 != 0) {
+		int padding = 16 - (_data.size() % 16);
+		for (int i = 0; i < padding; i++) {
+			_data.push_back(0);
+		}
+	}
+	aes_context.start(AESContext::Mode::MODE_CBC_ENCRYPT, key_array, _iv);
+	_data = aes_context.update(_data);
+	aes_context.finish();
+}
 
-Compression::Mode DataBlock::get_true_mode() {
+void DataBlock::decrypt(String key) {
+	PackedByteArray key_array = key.md5_buffer();
+	AESContext aes_context;
+	aes_context.start(AESContext::Mode::MODE_CBC_DECRYPT, key_array, _iv);
+	_data = aes_context.update(_data);
+	aes_context.finish();
+}
+
+Compression::Mode DataBlock::_get_true_mode() const {
 	switch (_compression_type) {
 		case COMPRESSION_FASTLZ: {
 			return Compression::Mode::MODE_FASTLZ;
@@ -72,10 +95,11 @@ Compression::Mode DataBlock::get_true_mode() {
 			return Compression::Mode::MODE_FASTLZ;
 		}
 	}
+	ERR_FAIL_V_MSG(Compression::Mode::MODE_FASTLZ,"DataBlock::_get_true_mode() called on invalid compression type");
 }
 
 void DataBlock::compress() {
-	Compression::Mode cm = get_true_mode();
+	Compression::Mode cm = _get_true_mode();
 	PackedByteArray compressed_array;
 	compressed_array.resize(Compression::get_max_compressed_buffer_size(_size, cm));
 	_size = Compression::compress(compressed_array.ptrw(), _data.ptrw(), _size, cm);
@@ -87,7 +111,7 @@ void DataBlock::compress() {
 }
 
 void DataBlock::decompress() {
-	Compression::Mode cm = get_true_mode();
+	Compression::Mode cm = _get_true_mode();
 	PackedByteArray decompressed_array;
 	decompressed_array.resize(1024);
 	_size = Compression::decompress(decompressed_array.ptrw(), 1024 ,_data.ptrw(), _data.size(), cm);
@@ -100,7 +124,7 @@ void DataBlock::decompress() {
 
 uint32_t DataBlock::_crc32(uint8_t *data) {
 	int crc = 0xFFFFFFFF;
-	for (uint8_t i = 0; i < _size; i++) {
+	for (uint32_t i = 0; i < _size; i++) {
 		crc = crc ^ data[i];
 		for (int j = 0; j < 8; j++) {
 			crc = (crc >> 1) ^ (0xEDB88320 & (-(crc & 1)));

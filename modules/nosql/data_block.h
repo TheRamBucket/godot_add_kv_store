@@ -25,9 +25,10 @@ public:
 	uint8_t get_compression_type();
 	uint32_t get_crc();
 	void set_data(PackedByteArray data);
-	void set_compression_type(uint8_t compression_type);
+	void set_compression_type(DataCompressionType compression_type);
 	void crc();
-	Compression::Mode get_true_mode();
+	void encrypt(String key);
+	void decrypt(String key);
 	void compress();
 	void decompress();
 
@@ -37,6 +38,10 @@ private:
 	uint32_t _size;
 	uint32_t _crc;
 	bool _is_compressed = false;
+	bool _is_encrypted = false;
 	uint32_t _crc32(uint8_t *data);
+	PackedByteArray _iv = {199, 90, 18, 143, 107, 157, 62, 161, 226, 65, 185, 247, 52, 7, 92, 147};
+
+	Compression::Mode _get_true_mode() const;
 
 };
