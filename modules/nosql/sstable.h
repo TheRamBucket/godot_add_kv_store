@@ -23,7 +23,7 @@ struct IndexBlockEntry {
 class SSTable {
 
 public:
-	SSTable CreateFromTree(RedBlackTree rbt);
+	SSTable CreateFromTree(RedBlackTree& rbt);
 	SSTable LoadFromFile(String path);
 	void WriteToFile(String path);
 	RedBlackTree to_red_black_tree();

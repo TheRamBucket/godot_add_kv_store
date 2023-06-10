@@ -4,7 +4,10 @@
 #include "core/io/stream_peer.h"
 #include "thirdparty/graphite/src/inc/opcodes.h"
 
-SSTable SSTable::CreateFromTree(RedBlackTree rbt) {
+SSTable SSTable::CreateFromTree(RedBlackTree& rbt) {
+	SSTable sstable;
+	sstable._generate_blocks(rbt);
+	return sstable;
 }
 
 SSTable SSTable::LoadFromFile(String path) {
@@ -14,9 +17,23 @@ void SSTable::WriteToFile(String path) {
 }
 
 RedBlackTree SSTable::to_red_black_tree() {
+	RedBlackTree rbt;
+	for (int i = 0; i < _keys.size(); i++) {
+		rbt.insert_node(_keys[i], _values[i], false);
+	}
+	return rbt;
 }
 
 SSTable SSTable::merge(Vector<SSTable> tables) {
+	RedBlackTree rbt;
+	for (int i = 0; i < tables.size(); i++) {
+		if (tables[i]._keys.size() > 0) {
+			for (int j = 0; j < tables[i]._keys.size(); j++) {
+				rbt.insert_node(tables[i]._keys[j], tables[i]._values[j], false);
+			}
+		}
+	}
+	return CreateFromTree(rbt);
 }
 
 void SSTable::_write_index_block() {
@@ -34,12 +51,12 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 	uint64_t current_offset = 0;
 	bool index_set = false;
 	bool filter_one_set = false;
-	bool filter_two_set = false;
 
-	for (int i = 0; i < _keys.size(); i++){
+	for (int i = 0; i < _keys.size(); i++) {
 		if (!index_set) {
 			current_index_entry.key = _keys[i];
 			current_index_entry.offset = current_offset;
+			index_set = true;
 		}
 
 		if (current_block_size + sizeof(_keys[i]) + sizeof(_values[i]) + sizeof(uint16_t) > DataBlock::MAX_BLOCK_SIZE) {
@@ -48,6 +65,9 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 			DataBlock temp(current_data.get_data_array());
 			_data_blocks.push_back(temp);
 			current_block_size = 0;
+			_index_entries.push_back(current_index_entry);
+			index_set = false;
+			filter_one_set = false;
 		}
 
 		if (current_block_size >= DataBlock::MAX_BLOCK_SIZE / 2) {
@@ -58,7 +78,6 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 				}
 				current_index_entry.filterTwo = filter_two._bits;
 				current_index_entry.filterTwoSize = filter_two._bits.size();
-				filter_two_set = true;
 			} else {
 				uint64_t element_count = i+1;
 				BloomFilter filter_one(element_count, 0.01);
@@ -72,7 +91,6 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 		}
 		current_data.put_64(_keys[i]);
 		current_data.put_var(_values[i]);
-
 	}
 }
 
