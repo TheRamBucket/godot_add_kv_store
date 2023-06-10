@@ -23,9 +23,9 @@ struct IndexBlockEntry {
 class SSTable {
 
 public:
-	SSTable CreateFromTree(RedBlackTree& rbt);
-	SSTable LoadFromFile(String path);
-	void WriteToFile(String path);
+	SSTable CreateFromTree(RedBlackTree& rbt, String database_name);
+	SSTable LoadFromFile(String file_name);
+	void WriteToFile(String file_name);
 	RedBlackTree to_red_black_tree();
 
 private:
@@ -36,11 +36,12 @@ private:
 	void _generate_blocks( RedBlackTree &rbt);
 	void _generate_blocks_helper(NodePtr p_node, NodePtr p_tnull);
 
+	String _database_name;
+
 	Vector<IndexBlockEntry> _index_entries;
 	Vector<DataBlock> _data_blocks;
 	Vector<uint64_t> _keys;
 	Vector<Variant> _values;
-	//Ref<BloomFilter> _current_filter = nullptr;
 	Ref<IndexBlockEntry> _current_index_entry = nullptr;
 	DataBlock * _current_data_block = nullptr;
 };

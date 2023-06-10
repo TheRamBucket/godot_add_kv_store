@@ -2,18 +2,18 @@
 #include "data_block.h"
 #include "red_black_tree.h"
 #include "core/io/stream_peer.h"
-#include "thirdparty/graphite/src/inc/opcodes.h"
 
-SSTable SSTable::CreateFromTree(RedBlackTree& rbt) {
+SSTable SSTable::CreateFromTree(RedBlackTree& rbt, String database_name) {
 	SSTable sstable;
+	sstable._database_name = database_name;
 	sstable._generate_blocks(rbt);
 	return sstable;
 }
 
-SSTable SSTable::LoadFromFile(String path) {
+SSTable SSTable::LoadFromFile(String file_name) {
 }
 
-void SSTable::WriteToFile(String path) {
+void SSTable::WriteToFile(String file_name) {
 }
 
 RedBlackTree SSTable::to_red_black_tree() {
