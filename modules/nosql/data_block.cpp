@@ -2,7 +2,7 @@
 #include "core/io/marshalls.h"
 #include "core/crypto/aes_context.h"
 
-constexpr int MAX_BLOCK_SIZE = 4096;
+
 
 DataBlock::DataBlock(PackedByteArray data, uint32_t crc, bool is_compressed, bool is_encrypted, bool multi_start,
 	bool multi_end) : _data(data), _size(data.size()), _crc(crc), _is_compressed(is_compressed),

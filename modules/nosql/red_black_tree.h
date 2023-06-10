@@ -29,6 +29,7 @@ class RedBlackTree {
 public:
 	RedBlackTree(String dir = "c:/db");
 	NodePtr get_root();
+	NodePtr get_tnull();
 	NodePtr search_tree(uint64_t p_key);
 	void insert_node(uint64_t p_key, Variant p_value, bool p_wal = true);
 	void delete_node(uint64_t p_key, bool p_wal = true);

@@ -27,21 +27,24 @@ uint64_t BloomFilter::nthHash(uint32_t n, uint64_t hashA, uint64_t hashB, uint64
 	return (hashA + n * hashB) % filterSize;
 }
 
-void BloomFilter::add(const Key *data) {
-	//auto hashValues = hash(String(data));
+void BloomFilter::add(const uint64_t data) {
+	String str = String::num_uint64(data);
+	auto hashValues = hash(str);
 
 	for (int n = 0; n < _numHashes; n++) {
-		//_bits[nthHash(n, hashValues[0], hashValues[1], _bits.size())] = true;
+		uint64_t index = nthHash(n, hashValues[0], hashValues[1], _bits.size());
+		_bits.set(index, true);
 	}
 }
 
-bool BloomFilter::mayContain(const Key *data) {
-	//auto hashValues = hash(data);
-
+bool BloomFilter::mayContain(const uint64_t data) {
+	String str = String::num_uint64(data);
+	auto hashValues = hash(str);
 	for (int n = 0; n < _numHashes; n++) {
-		//if (!_bits[nthHash(n, hashValues[0], hashValues[1], _bits.size())]) {
-			//return false;
-		//}
+		uint64_t index = nthHash(n, hashValues[0], hashValues[1], _bits.size());
+		if (!_bits.get(index)) {
+			return false;
+		}
 	}
 
 	return true;

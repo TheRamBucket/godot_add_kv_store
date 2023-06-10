@@ -23,6 +23,8 @@ public:
 	void write(String path);
 	void read(String path, uint64_t offset);
 
+	constexpr static int MAX_BLOCK_SIZE = 4096;
+
 private:
 	PackedByteArray _data;
 	uint32_t _size;
@@ -34,4 +36,5 @@ private:
 	uint32_t _crc32(uint8_t *data);
 	void _verify_size();
 	PackedByteArray _iv = {199, 90, 18, 143, 107, 157, 62, 161, 226, 65, 185, 247, 52, 7, 92, 147};
+
 };

@@ -18,6 +18,10 @@ NodePtr RedBlackTree::get_root() {
 	return this->root;
 }
 
+NodePtr RedBlackTree::get_tnull() {
+	return this->TNULL;
+}
+
 NodePtr RedBlackTree::search_tree(uint64_t p_key) {
 	return _search_tree(this->root, p_key);
 }
