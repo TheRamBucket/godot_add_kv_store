@@ -90,11 +90,11 @@ void DataBlock::decompress() {
 	_is_compressed = false;
 }
 
-void DataBlock::write(String path) {
-	Ref<FileAccess> file = FileAccess::open(path, FileAccess::WRITE);
+void DataBlock::write(Ref<FileAccess> file) {
+
 
 	ERR_FAIL_COND_MSG(!file->is_open(),"DataBlock::write() failed to open file");
-
+	file->seek_end();
 	uint16_t header;
 	header = (_size & 0xFFF) | (_is_compressed << 12) | (_is_encrypted << 13)
 			| (_multi_start << 14) | (_multi_end << 15);
@@ -110,10 +110,8 @@ void DataBlock::write(String path) {
 	file->close();
 }
 
-void DataBlock::read(String path, uint64_t offset) {
-	Ref<FileAccess> file = FileAccess::open(path, FileAccess::READ);
+void DataBlock::read(Ref<FileAccess> file) {
 	ERR_FAIL_COND_MSG(!file->is_open(),"DataBlock::read() failed to open file");
-	file->seek(offset);
 	uint16_t header = file->get_16();
 	_size = header & 0xFFF;
 	_is_compressed = (header >> 12) & 1;
@@ -123,7 +121,6 @@ void DataBlock::read(String path, uint64_t offset) {
 	_crc = file->get_32();
 	_data.resize(_size);
 	file->get_buffer(_data.ptrw(), _size);
-	file->close();
 }
 
 uint32_t DataBlock::_crc32(uint8_t *data) {

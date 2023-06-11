@@ -1,14 +1,11 @@
 ﻿#ifndef SSTABLE_H
 #define SSTABLE_H
 
-#include "red_black_tree.h"
 #include "core/io/file_access.h"
 #include "core/variant/variant.h"
-#include "bloom.h"
-
+#include "red_black_tree.h"
 
 class RedBlackTree;
-class BloomFilter;
 class DataBlock;
 
 struct IndexBlockEntry {
@@ -25,7 +22,7 @@ class SSTable {
 public:
 	SSTable CreateFromTree(RedBlackTree& rbt, String database_name);
 	SSTable LoadFromFile(String file_name);
-	void WriteToFile(String file_name);
+	void WriteToFile();
 	RedBlackTree to_red_black_tree();
 
 private:
@@ -35,6 +32,8 @@ private:
 	void _write_data_blocks();
 	void _generate_blocks( RedBlackTree &rbt);
 	void _generate_blocks_helper(NodePtr p_node, NodePtr p_tnull);
+	void _write_index_to_file(Ref<FileAccess> file_access);
+	uint64_t read_index_from_file(Ref<FileAccess> file_access);
 
 	String _database_name;
 

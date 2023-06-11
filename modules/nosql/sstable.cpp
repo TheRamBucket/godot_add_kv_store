@@ -1,7 +1,10 @@
 ﻿#include "sstable.h"
 #include "data_block.h"
-#include "red_black_tree.h"
+#include "bloom.h"
+
 #include "core/io/stream_peer.h"
+#include "core/os/os.h"
+
 
 SSTable SSTable::CreateFromTree(RedBlackTree& rbt, String database_name) {
 	SSTable sstable;
@@ -11,9 +14,26 @@ SSTable SSTable::CreateFromTree(RedBlackTree& rbt, String database_name) {
 }
 
 SSTable SSTable::LoadFromFile(String file_name) {
+	Ref<FileAccess> file_access = FileAccess::open("user://data/"+_database_name+"/"+file_name, FileAccess::READ);
+	SSTable sstable;
+	sstable._database_name = _database_name;
+	uint64_t entries = sstable.read_index_from_file(file_access);
+	for (int i = 0; i < entries; i++) {
+		DataBlock data_block;
+		data_block.read(file_access);
+		sstable._data_blocks.push_back(data_block);
+	}
+	return sstable;
 }
 
-void SSTable::WriteToFile(String file_name) {
+void SSTable::WriteToFile() {
+	Ref<OS> os = OS::get_singleton();
+	String file_name = String::num_uint64(os->get_unix_time());
+	Ref<FileAccess> file_access = FileAccess::open("user://data/"+_database_name+"/"+file_name, FileAccess::WRITE);
+	_write_index_to_file(file_access);
+	for (int i = 0; i < _data_blocks.size(); i++) {
+		_data_blocks.get(i).write(file_access);
+	}
 }
 
 RedBlackTree SSTable::to_red_black_tree() {
@@ -33,7 +53,7 @@ SSTable SSTable::merge(Vector<SSTable> tables) {
 			}
 		}
 	}
-	return CreateFromTree(rbt);
+	return CreateFromTree(rbt, _database_name);
 }
 
 void SSTable::_write_index_block() {
@@ -92,6 +112,43 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 		current_data.put_64(_keys[i]);
 		current_data.put_var(_values[i]);
 	}
+}
+
+void SSTable::_write_index_to_file(Ref<FileAccess> file_access) {
+	file_access->seek(0);
+	file_access->store_64(_index_entries.size());
+	for (int i = 0; i < _index_entries.size(); i++) {
+		file_access->store_64(_index_entries[i].key);
+		file_access->store_64(_index_entries[i].offset);
+		file_access->store_64(_index_entries[i].filterOneSize);
+		file_access->store_64(_index_entries[i].filterTwoSize);
+		for (int j = 0; j < _index_entries[i].filterOneSize; j++) {
+			file_access->store_8(_index_entries[i].filterOne[j]);
+		}
+		for (int j = 0; j < _index_entries[i].filterTwoSize; j++) {
+			file_access->store_8(_index_entries[i].filterTwo[j]);
+		}
+	}
+}
+
+uint64_t SSTable::read_index_from_file(Ref<FileAccess> file_access) {
+	file_access->seek(0);
+	uint64_t index_entry_count = file_access->get_64();
+	for (int i = 0; i < index_entry_count; i++) {
+		IndexBlockEntry entry;
+		entry.key = file_access->get_64();
+		entry.offset = file_access->get_64();
+		entry.filterOneSize = file_access->get_64();
+		entry.filterTwoSize = file_access->get_64();
+		for (int j = 0; j < entry.filterOneSize; j++) {
+			entry.filterOne.push_back(file_access->get_8());
+		}
+		for (int j = 0; j < entry.filterTwoSize; j++) {
+			entry.filterTwo.push_back(file_access->get_8());
+		}
+		_index_entries.push_back(entry);
+	}
+	return index_entry_count;
 }
 
 void SSTable::_generate_blocks_helper(NodePtr p_node, NodePtr p_tnull) {

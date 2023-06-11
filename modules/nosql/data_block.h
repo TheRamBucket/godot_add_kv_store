@@ -20,8 +20,8 @@ public:
 	void decrypt(String key);
 	void compress();
 	void decompress();
-	void write(String path);
-	void read(String path, uint64_t offset);
+	void write(Ref<FileAccess> file);
+	void read(Ref<FileAccess> file);
 
 	constexpr static int MAX_BLOCK_SIZE = 4096;
 
