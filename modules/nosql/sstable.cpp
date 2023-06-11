@@ -1,5 +1,5 @@
 ﻿#include "sstable.h"
-#include "data_block.h"
+
 #include "bloom.h"
 
 #include "core/io/stream_peer.h"
@@ -13,10 +13,10 @@ SSTable SSTable::CreateFromTree(RedBlackTree& rbt, String database_name) {
 	return sstable;
 }
 
-SSTable SSTable::LoadFromFile(String file_name) {
-	Ref<FileAccess> file_access = FileAccess::open("user://data/"+_database_name+"/"+file_name, FileAccess::READ);
+SSTable SSTable::LoadFromFile(String database_name,String file_name) {
+	Ref<FileAccess> file_access = FileAccess::open("user://data/"+database_name+"/"+file_name, FileAccess::READ);
 	SSTable sstable;
-	sstable._database_name = _database_name;
+	sstable._database_name = database_name;
 	uint64_t entries = sstable.read_index_from_file(file_access);
 	for (int i = 0; i < entries; i++) {
 		DataBlock data_block;
@@ -27,13 +27,17 @@ SSTable SSTable::LoadFromFile(String file_name) {
 }
 
 void SSTable::WriteToFile() {
-	Ref<OS> os = OS::get_singleton();
+	OS * os = OS::get_singleton();
 	String file_name = String::num_uint64(os->get_unix_time());
-	Ref<FileAccess> file_access = FileAccess::open("user://data/"+_database_name+"/"+file_name, FileAccess::WRITE);
+	Ref<DirAccess> dir_access = DirAccess::create(DirAccess::ACCESS_USERDATA);
+	dir_access->make_dir_recursive("user://data/"+_database_name);
+	String path = "user://data/"+_database_name +"/"+file_name+".dat";
+	Ref<FileAccess> file_access = FileAccess::open(path, FileAccess::WRITE);
 	_write_index_to_file(file_access);
 	for (int i = 0; i < _data_blocks.size(); i++) {
 		_data_blocks.get(i).write(file_access);
 	}
+	file_access->close();
 }
 
 RedBlackTree SSTable::to_red_black_tree() {
@@ -56,12 +60,6 @@ SSTable SSTable::merge(Vector<SSTable> tables) {
 	return CreateFromTree(rbt, _database_name);
 }
 
-void SSTable::_write_index_block() {
-}
-
-void SSTable::_write_data_blocks() {
-}
-
 void SSTable::_generate_blocks( RedBlackTree &rbt) {
 	_generate_blocks_helper(rbt.get_root(), rbt.get_tnull());
 	StreamPeerBuffer current_data;
@@ -80,8 +78,6 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 		}
 
 		if (current_block_size + sizeof(_keys[i]) + sizeof(_values[i]) + sizeof(uint16_t) > DataBlock::MAX_BLOCK_SIZE) {
-			_data_blocks.push_back(*_current_data_block);
-			delete _current_data_block;
 			DataBlock temp(current_data.get_data_array());
 			_data_blocks.push_back(temp);
 			current_block_size = 0;
@@ -111,10 +107,37 @@ void SSTable::_generate_blocks( RedBlackTree &rbt) {
 		}
 		current_data.put_64(_keys[i]);
 		current_data.put_var(_values[i]);
+		current_block_size += sizeof(_keys[i]) + sizeof(_values[i]) + sizeof(uint16_t);
+		if (i == _keys.size() - 1) {
+			DataBlock temp(current_data.get_data_array());
+			if (filter_one_set) {
+				BloomFilter filter_two(i, 0.01);
+				for (int j = 0; j < i; j++) {
+					filter_two.add(_keys[j]);
+				}
+				current_index_entry.filterTwo = filter_two._bits;
+				current_index_entry.filterTwoSize = filter_two._bits.size();
+			} else {
+				uint64_t element_count = i+1;
+				BloomFilter filter_one(element_count, 0.01);
+				for (int j = 0; j < element_count; j++) {
+					filter_one.add(_keys[j]);
+				}
+				current_index_entry.filterOne = filter_one._bits;
+				current_index_entry.filterOneSize = filter_one._bits.size();
+				filter_one_set = true;
+			}
+			_data_blocks.push_back(temp);
+			current_block_size = 0;
+			_index_entries.push_back(current_index_entry);
+			index_set = false;
+			filter_one_set = false;
+
+		}
 	}
 }
 
-void SSTable::_write_index_to_file(Ref<FileAccess> file_access) {
+void SSTable::_write_index_to_file(const Ref<FileAccess> &file_access) {
 	file_access->seek(0);
 	file_access->store_64(_index_entries.size());
 	for (int i = 0; i < _index_entries.size(); i++) {

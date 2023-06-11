@@ -107,7 +107,6 @@ void DataBlock::write(Ref<FileAccess> file) {
 		padding.resize_zeroed(MAX_BLOCK_SIZE - (_data.size()+6));
 		file->store_buffer(padding);
 	}
-	file->close();
 }
 
 void DataBlock::read(Ref<FileAccess> file) {

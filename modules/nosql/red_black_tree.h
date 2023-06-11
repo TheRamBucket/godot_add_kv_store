@@ -1,7 +1,6 @@
 ﻿#ifndef RED_BLACK_TREE_H
 #define RED_BLACK_TREE_H
 
-#include "common/cpu.h"
 #include "core/variant/variant.h"
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
