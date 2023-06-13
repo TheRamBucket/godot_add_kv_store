@@ -73,19 +73,19 @@ void SSTable::_write_index_to_file(const Ref<FileAccess> &file_access) {
 	}
 }
 
-Vector<Vector<Pair<uint64_t, Variant>>> SSTable::_split_to_blocks(Vector<Pair<uint64_t, Variant>> keys_values) {
+Vector<Vector<Pair<uint64_t, String>>> SSTable::_split_to_blocks(Vector<Pair<uint64_t, String>> keys_values) {
 	constexpr uint64_t MAX_BLOCK_SIZE = 2040;
 	uint64_t block_size = 0;
-	Vector<Vector<Pair<uint64_t, Variant>>> blocks;
-	Vector<Pair<uint64_t, Variant>> block;
+	Vector<Vector<Pair<uint64_t, String>>> blocks;
+	Vector<Pair<uint64_t, String>> block;
 	for (const auto &key_value : keys_values) {
-		if (block_size + sizeof(key_value.first) + key_value.second. > MAX_BLOCK_SIZE) {
+		if (block_size + sizeof(key_value.first) + (key_value.second.length() * static_cast<uint64_t>(sizeof(char32_t))) > MAX_BLOCK_SIZE) {
 			blocks.push_back(block);
-			block = Vector<Pair<uint64_t, Variant>>();
+			block = Vector<Pair<uint64_t, String>>();
 			block_size = 0;
 		}
 		block.push_back(key_value);
-		block_size += key_value.second.get_data_size();
+		block_size += sizeof(key_value.first) + (key_value.second.length() * static_cast<uint64_t>(sizeof(char32_t)));
 	}
 
 }

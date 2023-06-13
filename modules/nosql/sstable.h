@@ -33,7 +33,7 @@ private:
 	void _generate_blocks( RedBlackTree &rbt);
 	void _generate_blocks_helper(NodePtr p_node, NodePtr p_tnull);
 	void _write_index_to_file(const Ref<FileAccess> &file_access);
-	Vector<Vector<Pair<uint64_t, String>>> _split_to_blocks(Vector<Pair<uint64_t, Variant>> keys_values);
+	Vector<Vector<Pair<uint64_t, String>>> _split_to_blocks(Vector<Pair<uint64_t, String>> keys_values);
 	uint64_t read_index_from_file(Ref<FileAccess> file_access);
 
 	String _database_name;
