@@ -2,7 +2,6 @@
 #define SSTABLE_H
 
 #include "core/io/file_access.h"
-#include "core/variant/variant.h"
 #include "red_black_tree.h"
 #include "data_block.h"
 

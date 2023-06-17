@@ -26,7 +26,7 @@ enum class ACTION_TYPE : uint8_t {
 
 class RedBlackTree {
 public:
-	RedBlackTree(String dir = "c:/db");
+	RedBlackTree();
 	NodePtr get_root();
 	NodePtr get_tnull();
 	NodePtr search_tree(uint64_t p_key);

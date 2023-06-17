@@ -2,7 +2,7 @@
 #define TEST_HASH_H
 
 #include "tests/test_macros.h"
-#include "modules/nosql/sstable.h"
+#include "modules/nosql/database/sstable.h"
 
 namespace TestHash {
 TEST_CASE("[Tree] testing") {

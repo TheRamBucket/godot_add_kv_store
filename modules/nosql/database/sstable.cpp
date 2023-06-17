@@ -49,6 +49,7 @@ RedBlackTree SSTable::to_red_black_tree() const {
 }
 
 SSTable SSTable::merge(Vector<SSTable> tables) {
+	return SSTable();
 }
 
 void SSTable::_generate_blocks( RedBlackTree &rbt) {
@@ -87,6 +88,7 @@ Vector<Vector<Pair<uint64_t, String>>> SSTable::_split_to_blocks(Vector<Pair<uin
 		block.push_back(key_value);
 		block_size += sizeof(key_value.first) + (key_value.second.length() * static_cast<uint64_t>(sizeof(char32_t)));
 	}
+	return blocks;
 
 }
 

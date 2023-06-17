@@ -1,17 +1,27 @@
 ﻿#include "red_black_tree.h"
+#include "../nosql_conf.h"
 
 const char* wal_file = "wal.dat";
 
-RedBlackTree::RedBlackTree(String dir) {
-		TNULL = new RBTNode;
-		TNULL->color = 0;
-		TNULL->left = nullptr;
-		TNULL->right = nullptr;
-		root = TNULL;
-		db_dir = dir;
-		if (FileAccess::exists(db_dir + "/" + wal_file)) {
-			_run_wal_file();
-		}
+RedBlackTree::RedBlackTree() {
+	TNULL = new RBTNode;
+	TNULL->color = 0;
+	TNULL->left = nullptr;
+	TNULL->right = nullptr;
+	root = TNULL;
+    NoSQLConfig config;
+	Dictionary conf = config.get_database_config("untitled");
+	db_dir = conf["database_dir"];
+	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_USERDATA);
+	if (!dir->dir_exists(db_dir)) {
+		dir->make_dir_recursive(db_dir);
+	}
+	if (!dir->file_exists(db_dir+"/"+wal_file)) {
+		Ref<FileAccess> file = FileAccess::open(db_dir+"/"+wal_file, FileAccess::WRITE);
+		file->close();
+	} else {
+		_run_wal_file();
+	}
 }
 
 NodePtr RedBlackTree::get_root() {
