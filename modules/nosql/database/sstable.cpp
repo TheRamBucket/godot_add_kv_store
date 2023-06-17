@@ -5,6 +5,8 @@
 #include "core/io/stream_peer.h"
 #include "core/os/os.h"
 
+#include <string>
+
 
 SSTable SSTable::CreateFromTree(RedBlackTree &rbt, String database_name) {
 	SSTable sstable;
@@ -54,6 +56,17 @@ SSTable SSTable::merge(Vector<SSTable> tables) {
 
 void SSTable::_generate_blocks(RedBlackTree &rbt) {
 	_generate_blocks_helper(rbt.get_root(), rbt.get_tnull());
+	Vector<Vector<Pair<uint64_t, String>>> blocks = _split_to_blocks(_keys_values);
+	for (int i = 0; i < blocks.size(); i++) {
+		DataBlock data_block;
+		Ref<StreamPeerBuffer> stream_peer_buffer = memnew(StreamPeerBuffer);
+		for (int j = 0; j < blocks[i].size(); j++) {
+			stream_peer_buffer->put_u64(blocks[i][j].first);
+			stream_peer_buffer->put_string(blocks[i][j].second);
+		}
+		data_block.set_data(stream_peer_buffer->get_data_array());
+		_data_blocks.push_back(data_block);
+	}
 }
 
 void SSTable::_write_index_to_file(const Ref<FileAccess> &file_access) {
@@ -86,6 +99,9 @@ Vector<Vector<Pair<uint64_t, String>>> SSTable::_split_to_blocks(Vector<Pair<uin
 		}
 		block.push_back(key_value);
 		block_size += sizeof(key_value.first) + (key_value.second.length() * static_cast<uint64_t>(sizeof(char32_t)));
+	}
+	if (block.size() > 0) {
+		blocks.push_back(block);
 	}
 	return blocks;
 }
