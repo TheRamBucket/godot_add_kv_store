@@ -6,7 +6,7 @@
 #include "core/os/os.h"
 
 
-SSTable SSTable::CreateFromTree(RedBlackTree& rbt, String database_name) {
+SSTable SSTable::CreateFromTree(RedBlackTree &rbt, String database_name) {
 	SSTable sstable;
 	sstable._database_name = database_name;
 	sstable._generate_blocks(rbt);
@@ -14,7 +14,7 @@ SSTable SSTable::CreateFromTree(RedBlackTree& rbt, String database_name) {
 }
 
 SSTable SSTable::LoadFromFile(const String &database_name, const String &file_name) {
-	const Ref<FileAccess> file_access = FileAccess::open("user://data/"+database_name+"/"+file_name, FileAccess::READ);
+	const Ref<FileAccess> file_access = FileAccess::open("user://data/" + database_name + "/" + file_name, FileAccess::READ);
 	SSTable sstable;
 	sstable._database_name = database_name;
 	const uint64_t entries = sstable.read_index_from_file(file_access);
@@ -27,11 +27,11 @@ SSTable SSTable::LoadFromFile(const String &database_name, const String &file_na
 }
 
 void SSTable::WriteToFile() {
-	const OS * os = OS::get_singleton();
+	const OS *os = OS::get_singleton();
 	const String file_name = String::num_uint64(os->get_unix_time());
 	const Ref<DirAccess> dir_access = DirAccess::create(DirAccess::ACCESS_USERDATA);
-	dir_access->make_dir_recursive("user://data/"+_database_name);
-	const String path = "user://data/"+_database_name +"/"+file_name+".dat";
+	dir_access->make_dir_recursive("user://data/" + _database_name);
+	const String path = "user://data/" + _database_name + "/" + file_name + ".dat";
 	const Ref<FileAccess> file_access = FileAccess::open(path, FileAccess::WRITE);
 	_write_index_to_file(file_access);
 	for (int i = 0; i < _data_blocks.size(); i++) {
@@ -52,9 +52,8 @@ SSTable SSTable::merge(Vector<SSTable> tables) {
 	return SSTable();
 }
 
-void SSTable::_generate_blocks( RedBlackTree &rbt) {
+void SSTable::_generate_blocks(RedBlackTree &rbt) {
 	_generate_blocks_helper(rbt.get_root(), rbt.get_tnull());
-
 }
 
 void SSTable::_write_index_to_file(const Ref<FileAccess> &file_access) {
@@ -89,7 +88,6 @@ Vector<Vector<Pair<uint64_t, String>>> SSTable::_split_to_blocks(Vector<Pair<uin
 		block_size += sizeof(key_value.first) + (key_value.second.length() * static_cast<uint64_t>(sizeof(char32_t)));
 	}
 	return blocks;
-
 }
 
 uint64_t SSTable::read_index_from_file(Ref<FileAccess> file_access) {
@@ -115,7 +113,7 @@ uint64_t SSTable::read_index_from_file(Ref<FileAccess> file_access) {
 void SSTable::_generate_blocks_helper(const NodePtr p_node, NodePtr p_tnull) {
 	if (p_node != p_tnull) {
 		_generate_blocks_helper(p_node->left, p_tnull);
-		_keys_values.push_back({p_node->key, p_node->value.to_json_string()});
+		_keys_values.push_back({ p_node->key, p_node->value.to_json_string() });
 		_generate_blocks_helper(p_node->right, p_tnull);
 	}
 }

@@ -1,7 +1,7 @@
 ﻿#include "red_black_tree.h"
 #include "../nosql_conf.h"
 
-const char* wal_file = "wal.dat";
+const char *wal_file = "wal.dat";
 
 RedBlackTree::RedBlackTree() {
 	TNULL = new RBTNode;
@@ -9,15 +9,15 @@ RedBlackTree::RedBlackTree() {
 	TNULL->left = nullptr;
 	TNULL->right = nullptr;
 	root = TNULL;
-    NoSQLConfig config;
+	NoSQLConfig config;
 	Dictionary conf = config.get_database_config("untitled");
 	db_dir = conf["database_dir"];
 	Ref<DirAccess> dir = DirAccess::create(DirAccess::ACCESS_USERDATA);
 	if (!dir->dir_exists(db_dir)) {
 		dir->make_dir_recursive(db_dir);
 	}
-	if (!dir->file_exists(db_dir+"/"+wal_file)) {
-		Ref<FileAccess> file = FileAccess::open(db_dir+"/"+wal_file, FileAccess::WRITE);
+	if (!dir->file_exists(db_dir + "/" + wal_file)) {
+		Ref<FileAccess> file = FileAccess::open(db_dir + "/" + wal_file, FileAccess::WRITE);
 		file->close();
 	} else {
 		_run_wal_file();
@@ -38,7 +38,7 @@ NodePtr RedBlackTree::search_tree(uint64_t p_key) {
 
 void RedBlackTree::insert_node(uint64_t p_key, Variant p_value, bool p_wal) {
 	// Ordinary Binary Search Insertion
-	NodePtr node = new RBTNode;
+	auto node = new RBTNode;
 	node->parent = nullptr;
 	node->key = p_key;
 	node->value = p_value;
@@ -72,9 +72,8 @@ void RedBlackTree::insert_node(uint64_t p_key, Variant p_value, bool p_wal) {
 		y->right = node;
 	}
 
-
 	// if new node is a root node, simply return
-	if (node->parent == nullptr){
+	if (node->parent == nullptr) {
 		node->color = 0;
 		return;
 	}
@@ -86,7 +85,6 @@ void RedBlackTree::insert_node(uint64_t p_key, Variant p_value, bool p_wal) {
 
 	// Fix the tree
 	_fix_insert(node);
-
 }
 
 void RedBlackTree::delete_node(uint64_t p_key, bool p_wal) {
@@ -137,7 +135,7 @@ void RedBlackTree::_run_wal_file() {
 		if (file->get_length() - file->get_position() < 9) {
 			break;
 		}
-		const ACTION_TYPE action = static_cast<ACTION_TYPE>(file->get_8());
+		const auto action = static_cast<ACTION_TYPE>(file->get_8());
 		const uint64_t key = file->get_64();
 		const Variant value = file->get_var();
 		switch (action) {
@@ -322,7 +320,7 @@ void RedBlackTree::_fix_delete(NodePtr p_node) {
 void RedBlackTree::_rb_transplant(NodePtr u, NodePtr v) {
 	if (u->parent == nullptr) {
 		root = v;
-	} else if (u == u->parent->left){
+	} else if (u == u->parent->left) {
 		u->parent->left = v;
 	} else {
 		u->parent->right = v;
@@ -330,10 +328,10 @@ void RedBlackTree::_rb_transplant(NodePtr u, NodePtr v) {
 	v->parent = u->parent;
 }
 
-void RedBlackTree::_delete_node(NodePtr p_node, uint64_t p_key,bool p_wal) {
+void RedBlackTree::_delete_node(NodePtr p_node, uint64_t p_key, bool p_wal) {
 	NodePtr z = TNULL;
 	NodePtr x, y;
-	while (p_node != TNULL){
+	while (p_node != TNULL) {
 		if (p_node->key == p_key) {
 			z = p_node;
 		}
@@ -349,7 +347,7 @@ void RedBlackTree::_delete_node(NodePtr p_node, uint64_t p_key,bool p_wal) {
 		return;
 	}
 	if (p_wal) {
-		_store_wal_entry(z,ACTION_TYPE::DELETE);
+		_store_wal_entry(z, ACTION_TYPE::DELETE);
 	}
 	y = z;
 	int y_original_color = y->color;
@@ -377,7 +375,7 @@ void RedBlackTree::_delete_node(NodePtr p_node, uint64_t p_key,bool p_wal) {
 		y->color = z->color;
 	}
 	delete z;
-	if (y_original_color == 0){
+	if (y_original_color == 0) {
 		_fix_delete(x);
 	}
 }
