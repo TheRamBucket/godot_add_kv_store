@@ -12,8 +12,13 @@ class DataBlock;
 struct IndexBlockEntry {
 	uint64_t key;
 	uint64_t offset;
+	double false_positive_probability;
+
+	uint64_t num_entries_one;
 	uint16_t filterOneSize;
 	Vector<bool> filterOne;
+
+	uint64_t num_entries_two;
 	uint16_t filterTwoSize;
 	Vector<bool> filterTwo;
 };

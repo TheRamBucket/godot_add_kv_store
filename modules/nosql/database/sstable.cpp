@@ -54,18 +54,62 @@ SSTable SSTable::merge(Vector<SSTable> tables) {
 	return SSTable();
 }
 
+BloomFilter* createBloomFilter(Vector<uint64_t> keys) {
+	BloomFilter* bloom_filter = new BloomFilter(keys.size(), 0.01);
+	for (int i = 0; i < keys.size(); i++) {
+		bloom_filter->add(keys[i]);
+	}
+	return bloom_filter;
+}
+
 void SSTable::_generate_blocks(RedBlackTree &rbt) {
 	_generate_blocks_helper(rbt.get_root(), rbt.get_tnull());
 	Vector<Vector<Pair<uint64_t, String>>> blocks = _split_to_blocks(_keys_values);
+	uint64_t total_offset = 0;
+	Vector<uint64_t> keys;
+	Vector<BloomFilter*> bloom_filters;
 	for (int i = 0; i < blocks.size(); i++) {
 		DataBlock data_block;
-		Ref<StreamPeerBuffer> stream_peer_buffer = memnew(StreamPeerBuffer);
+		IndexBlockEntry index_block_entry;
+
+		Ref stream_peer_buffer = memnew(StreamPeerBuffer);
 		for (int j = 0; j < blocks[i].size(); j++) {
 			stream_peer_buffer->put_u64(blocks[i][j].first);
 			stream_peer_buffer->put_string(blocks[i][j].second);
+			keys.push_back(blocks[i][j].first);
+			total_offset += sizeof(uint64_t) + blocks[i][j].second.length() * sizeof(char32_t);
+			if (total_offset >= DataBlock::MAX_BLOCK_SIZE / 2 && bloom_filters.size() == 0) {
+				bloom_filters.push_back(createBloomFilter(keys));
+				index_block_entry.num_entries_one = keys.size();
+				keys.clear();
+			}
 		}
+		bloom_filters.push_back(createBloomFilter(keys));
 		data_block.set_data(stream_peer_buffer->get_data_array());
 		_data_blocks.push_back(data_block);
+		index_block_entry.num_entries_two = keys.size();
+		index_block_entry.false_positive_probability = 0.01;
+		for (int j = 0; j < bloom_filters.size(); j++) {
+			if (j == 0) {
+				index_block_entry.key = blocks[i][0].first;
+				index_block_entry.offset = total_offset;
+				if (!(index_block_entry.num_entries_one > 0)) {
+					index_block_entry.num_entries_one = index_block_entry.num_entries_two;
+					index_block_entry.num_entries_two = 0;
+					index_block_entry.filterTwoSize = 0;
+					index_block_entry.filterTwo = Vector<bool>();
+				}
+				index_block_entry.filterOneSize = bloom_filters[0]->_bits.size();
+				index_block_entry.filterOne = bloom_filters[0]->_bits;
+			} else {
+				index_block_entry.filterTwoSize = bloom_filters[1]->_bits.size();
+				index_block_entry.filterTwo = bloom_filters[1]->_bits;
+			}
+
+			_index_entries.push_back(index_block_entry);
+		}
+
+		total_offset = DataBlock::MAX_BLOCK_SIZE + 1;
 	}
 }
 
@@ -75,7 +119,10 @@ void SSTable::_write_index_to_file(const Ref<FileAccess> &file_access) {
 	for (int i = 0; i < _index_entries.size(); i++) {
 		file_access->store_64(_index_entries[i].key);
 		file_access->store_64(_index_entries[i].offset);
+		file_access->store_double(_index_entries[i].false_positive_probability);
+		file_access->store_64(_index_entries[i].num_entries_one);
 		file_access->store_16(_index_entries[i].filterOneSize);
+		file_access->store_64(_index_entries[i].num_entries_two);
 		file_access->store_16(_index_entries[i].filterTwoSize);
 		for (int j = 0; j < _index_entries[i].filterOneSize; j++) {
 			file_access->store_8(_index_entries[i].filterOne[j]);
@@ -113,7 +160,10 @@ uint64_t SSTable::read_index_from_file(Ref<FileAccess> file_access) {
 		IndexBlockEntry entry;
 		entry.key = file_access->get_64();
 		entry.offset = file_access->get_64();
+		entry.false_positive_probability = file_access->get_double();
+		entry.num_entries_one = file_access->get_64();
 		entry.filterOneSize = file_access->get_16();
+		entry.num_entries_two = file_access->get_64();
 		entry.filterTwoSize = file_access->get_16();
 		for (int j = 0; j < entry.filterOneSize; j++) {
 			entry.filterOne.push_back(file_access->get_8());
