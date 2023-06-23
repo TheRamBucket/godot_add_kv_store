@@ -50,9 +50,47 @@ enum class ACTION_TYPE : uint8_t {
 	DELETE
 };
 
+
+class RedBlackTreeIterator {
+public:
+	RedBlackTreeIterator(NodePtr p_node) {
+		_node = p_node;
+	}
+
+	RedBlackTreeIterator& operator++() {
+		if (_node->right != nullptr) {
+			_node = _node->right;
+			while (_node->left != nullptr) {
+				_node = _node->left;
+			}
+		} else {
+			NodePtr y = _node->parent;
+			while (y != nullptr && _node == y->right) {
+				_node = y;
+				y = y->parent;
+			}
+			_node = y;
+		}
+		return *this;
+	}
+
+	RedBlackTreeIterator operator++(int) {
+		RedBlackTreeIterator tmp = *this;
+		++(*this);
+		return tmp;
+	}
+
+	NodePtr& operator*() {
+		return _node;
+	}
+
+private:
+	NodePtr _node;
+};
+
 class RedBlackTreeComponent : KVSComponent {
 public:
-
+	RedBlackTreeComponent();
 // ----------------------------------------------------------------
 // Called from the controller to notify the component of an event
 // ----------------------------------------------------------------
@@ -71,6 +109,16 @@ public:
 	NodePtr maximum(NodePtr p_node);
 	void inorder() {
 		inOrderHelper(this->root);
+	}
+	RedBlackTreeIterator begin() {
+		NodePtr node = root;
+		while (node->left != nullptr) {
+			node = node->left;
+		}
+		return RedBlackTreeIterator(node);
+	}
+	RedBlackTreeIterator end() {
+		return nullptr;
 	}
 
 private:
