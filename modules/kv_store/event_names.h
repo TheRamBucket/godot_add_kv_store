@@ -19,6 +19,7 @@ namespace KVSEvents {
 	const String COMPONENT_INITIALIZED = "component_initialized";
 	const String GET_STATE = "get_state";
 	const String STATE_CHANGED = "state_changed";
+	const String ERROR = "error";
 
 
 // ----------------------------------------------------------------
@@ -28,6 +29,12 @@ namespace KVSEvents {
 	const String KEY_REMOVED = "key_removed";
 	const String RBT_FULL = "rbt_full";
 
+
+// ----------------------------------------------------------------
+// Key Value Store Events
+// ----------------------------------------------------------------
+	const String ADD_KEY = "add_key";
+	const String REMOVE_KEY = "remove_key";
 
 
 }

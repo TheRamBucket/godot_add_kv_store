@@ -295,7 +295,7 @@ void RedBlackTree::_fix_delete(NodePtr p_node) {
 				s = p_node->parent->left;
 			}
 
-			if (s->right->color == 0 && s->right->color == 0) {
+			if (s->right->color == 0) {
 				s->color = 1;
 				p_node = p_node->parent;
 			} else {

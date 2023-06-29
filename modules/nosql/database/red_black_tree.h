@@ -34,9 +34,6 @@ public:
 	void delete_node(uint64_t p_key, bool p_wal = true);
 	NodePtr minimum(NodePtr p_node);
 	NodePtr maximum(NodePtr p_node);
-	void inorder() {
-		inOrderHelper(this->root);
-	}
 
 
 private:
@@ -54,36 +51,11 @@ private:
 	void _fix_delete(NodePtr p_node);
 	void _rb_transplant(NodePtr u, NodePtr v);
 	void _delete_node(NodePtr p_node, uint64_t p_key, bool p_wal);
-	void inOrderHelper(NodePtr node) {
-		int64_t testi;
-		float testf;
-		String tests;
-		if (node != TNULL) {
-			inOrderHelper(node->left);
-			switch(node->value.get_type()) {
 
-				case Variant::Type::FLOAT:
-					testf = node->value;
-					std::cout<<"key: "<<node->key<<" | data: " << testf << std::endl;
-					break;
+};
 
-				case Variant::INT:
-					testi = node->value;
-					std::cout<<"key: "<<node->key<<" | data: " << testi << std::endl;
-					break;
-
-
-				case Variant::STRING:
-					tests = node->value;
-					std::cout<<"key: "<<node->key<<" | data: " << tests.utf8().get_data() << std::endl;
-					break;
-
-
-			}
-			inOrderHelper(node->right);
-		}
-
-	}
+class RBTIterator {
+public:
 
 };
 

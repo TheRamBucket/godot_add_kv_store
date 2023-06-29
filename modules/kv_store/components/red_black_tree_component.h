@@ -102,32 +102,19 @@ public:
 
 	NodePtr get_root();
 	NodePtr get_tnull();
-	NodePtr search_tree(uint64_t p_key);
-	void insert_node(uint64_t p_key, Variant p_value, bool p_wal = true);
-	void delete_node(uint64_t p_key, bool p_wal = true);
-	NodePtr minimum(NodePtr p_node);
-	NodePtr maximum(NodePtr p_node);
-	void inorder() {
-		inOrderHelper(this->root);
-	}
-	RedBlackTreeIterator begin() {
-		NodePtr node = root;
-		while (node->left != nullptr) {
-			node = node->left;
-		}
-		return RedBlackTreeIterator(node);
-	}
-	RedBlackTreeIterator end() {
-		return nullptr;
-	}
+
 
 private:
 	NodePtr root;
 	NodePtr TNULL;
 	String db_dir;
+
+	//TODO: move to its own component?
 	void _store_wal_entry(NodePtr p_node, ACTION_TYPE p_action) const;
 	void _run_wal_file();
 	void _reset_wal_file() const;
+	//
+
 	void _init_null_node(NodePtr p_node, NodePtr p_parent);
 	NodePtr _search_tree(NodePtr p_node, uint64_t p_key) const;
 	void _fix_insert(NodePtr p_node);
@@ -136,7 +123,21 @@ private:
 	void _fix_delete(NodePtr p_node);
 	void _rb_transplant(NodePtr u, NodePtr v);
 	void _delete_node(NodePtr p_node, uint64_t p_key, bool p_wal);
-	void inOrderHelper(NodePtr node);
+	NodePtr search_tree(uint64_t p_key);
+	void insert_node(uint64_t p_key, Variant p_value, bool p_wal = true);
+	void delete_node(uint64_t p_key, bool p_wal = true);
+	NodePtr minimum(NodePtr p_node);
+	NodePtr maximum(NodePtr p_node);
+	RedBlackTreeIterator begin() {
+		NodePtr node = root;
+		while (node->left != nullptr) {
+			node = node->left;
+		}
+		return RedBlackTreeIterator(node);
+	}
+	RedBlackTreeIterator end() {
+		return RedBlackTreeIterator(nullptr);
+	}
 
 
 };
