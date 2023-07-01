@@ -45,8 +45,8 @@ public:
 
 
 	void set_controller(KVSControllerBase* controller) { _controller = controller; }
-	virtual void notify(String p_event, Variant p_data, Variant::Type p_data_type) = 0;
-	virtual void notify(String p_event) = 0;
+	virtual void update(String p_event, Variant p_data, Variant::Type p_data_type) = 0;
+	virtual void update(String p_event) = 0;
 
 
 protected:

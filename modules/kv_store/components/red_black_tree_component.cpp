@@ -3,7 +3,6 @@
 #include "core/io/dir_access.h"
 #include "core/io/file_access.h"
 #include "modules/kv_store/nosql_conf.h"
-#include "modules/kv_store/controllers/kvs_controller_base.h"
 
 const String wal_file = "wal.dat";
 
@@ -31,6 +30,12 @@ RedBlackTreeComponent::RedBlackTreeComponent() {
 	}
 }
 
+void RedBlackTreeComponent::update(String p_event, Variant p_data, Variant::Type p_data_type) {
+}
+
+void RedBlackTreeComponent::update(String p_event) {
+}
+
 
 bool verify_kv_dict(Variant p_data) {
 	bool has_key;
@@ -44,34 +49,17 @@ bool verify_kv_dict(Variant p_data) {
 	if (!has_key || !has_value || !has_wal) {
 		return false;
 	}
-
-	return true;
-}
-
-void RedBlackTreeComponent::notify(String p_event, Variant p_data, Variant::Type p_data_type) {
-	switch (p_event) {
-		case KVSEvents::ADD_KEY : {
-			if (p_data_type != Variant::DICTIONARY) {
-				this->_controller->notify(this, KVSEvents::ERROR, "[RedBlackTreeComponent] Invalid data type for add key event", Variant::STRING);
-				return;
-			}
-
-			if (!verify_kv_dict(p_data)) {
-				this->_controller->notify(this, KVSEvents::ERROR, "[RedBlackTreeComponent] Invalid data for add key event", Variant::STRING);
-				return;
-			}
-		} break;
-
-		case KVSEvents::REMOVE_KEY : {
-			if (p_data_type != Variant::INT) {
-				this->_controller->notify(this, KVSEvents::ERROR, "[RedBlackTreeComponent] Invalid data type for remove key event", Variant::STRING);
-			}
-		} break;
+	if (p_data.get("key").get_type() != Variant::INT) {
+	 return false;
+	}
+	if (p_data.get("value").is_null()) {
+		return false;
+	}
+	if (p_data.get("wal").get_type() != Variant::BOOL) {
+		return false;
 	}
 
-}
-
-void RedBlackTreeComponent::notify(String p_event) {
+	return true;
 }
 
 NodePtr RedBlackTreeComponent::get_root() {

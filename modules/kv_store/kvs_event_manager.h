@@ -1,5 +1,5 @@
 ﻿// /**************************************************************************/
-// /*  on_disk_controller.h                                               */
+// /*  kvs_event_manager.h                                               */
 // /**************************************************************************/
 // /*                         This file is part of:                          */
 // /*                             GODOT ENGINE                               */
@@ -29,12 +29,20 @@
 // /**************************************************************************/
 
 
-#ifndef ON_DISK_CONTROLLER_H
-#define ON_DISK_CONTROLLER_H
-#include "kvs_controller_base.h"
+#ifndef KVS_EVENT_MANAGER_H
+#define KVS_EVENT_MANAGER_H
+#include "core/variant/variant.h"
+#include "components/kvs_component.h"
 
-class OnDiskController : KVSControllerBase {
-	public:
+class KVSEventManager {
+public:
+	void notify(const String &p_event, const Variant &p_data, Variant::Type p_data_type);
+	void notify(const String &p_event);
+	void subscribe(KVSComponent* component);
+	void unsubscribe(KVSComponent* component);
+
+private:
+	Vector<KVSComponent*> _components;
 
 };
 

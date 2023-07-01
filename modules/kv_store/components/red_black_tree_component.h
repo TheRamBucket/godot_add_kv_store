@@ -95,8 +95,8 @@ public:
 // Called from the controller to notify the component of an event
 // ----------------------------------------------------------------
 
-	void notify(String p_event, Variant p_data, Variant::Type p_data_type) override;
-	void notify(String p_event) override;
+	void update(String p_event, Variant p_data, Variant::Type p_data_type) override;
+	void update(String p_event) override;
 
 // ----------------------------------------------------------------
 
